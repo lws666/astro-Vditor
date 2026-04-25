@@ -39,6 +39,11 @@
                     <input type="text" id="fm-image" placeholder="/blog-placeholder.jpg" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
                 </div>
 
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">文章分类 (Category)</label>
+                    <input type="text" id="fm-category" placeholder="技术笔记" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                </div>
+
                 <div class="space-y-1.5 md:col-span-2">
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">摘要描述 (Description)</label>
                     <input type="text" id="fm-desc" placeholder="关于这篇文章的简短介绍..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
@@ -49,7 +54,7 @@
                     <input type="date" id="fm-date" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
                 </div>
 
-                <div class="space-y-1.5">
+                <div class="space-y-1.5 md:col-span-1">
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">标签 (Tags)</label>
                     <input type="text" id="fm-tags" placeholder="tech, tutorial" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
                 </div>
@@ -64,6 +69,7 @@
         let vditor;
 
         window.onload = () => {
+            // 初始化日期为今天
             document.getElementById('fm-date').valueAsDate = new Date();
 
             vditor = new Vditor('vditor', {
@@ -71,7 +77,7 @@
                 placeholder: '使用 Markdown 开始创作...',
                 theme: 'classic',
                 icon: 'ant-design',
-                mode: 'ir',
+                mode: 'ir', // 即时渲染模式
                 cache: { enable: true },
                 toolbarConfig: { pin: true },
                 toolbar: [
@@ -85,35 +91,44 @@
         };
 
         function exportMarkdown() {
+            // 获取输入值
             const title = document.getElementById('fm-title').value || 'Untitled';
             const desc = document.getElementById('fm-desc').value || '';
             const image = document.getElementById('fm-image').value || '';
             const date = document.getElementById('fm-date').value || new Date().toISOString().split('T')[0];
+            const category = document.getElementById('fm-category').value || 'Uncategorized';
             const tagsRaw = document.getElementById('fm-tags').value;
             
-            // 标签处理
+            // 标签处理：转为 YAML 列表格式
             const tags = tagsRaw ? tagsRaw.split(',').map(tag => `  - ${tag.trim()}`).join('\n') : '';
             const tagsSection = tags ? `tags:\n${tags}` : 'tags: []';
 
-            // 构建带有封面图的 Frontmatter (适配 Astro 默认模板)
+            // 构建带有 Category 的 Frontmatter
             const frontmatter = `---
 title: "${title}"
 description: "${desc}"
-pubDate: ${date}
-heroImage: "${image}"
+published: ${date}
+category: "${category}"
+image: "${image}"
 ${tagsSection}
 ---`;
 
             const content = vditor.getValue();
             const fullContent = `${frontmatter}\n\n${content}`;
 
+            // 导出文件逻辑
             const blob = new Blob([fullContent], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            // 简单处理文件名：移除特殊字符并用连字符连接
-            const fileName = title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-');
-            a.download = `${fileName}.md`;
+            
+            // 处理文件名
+            const fileName = title.toLowerCase()
+                .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            
+            a.download = `${fileName || 'post'}.md`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
