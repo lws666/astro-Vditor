@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro Markdown Editor</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --vditor-color: #3b82f6; }
+        .vditor { border-radius: 8px; border: 1px solid #e5e7eb !important; }
+        .vditor-toolbar { border-bottom: 1px solid #e5e7eb !important; background-color: #f9fafb !important; border-radius: 8px 8px 0 0; }
+        input:focus { border-color: #3b82f6 !important; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8 font-sans text-slate-900">
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        <header class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-slate-800">Astro Editor</h1>
+                <p class="text-sm text-slate-500">集成封面管理与 Frontmatter 导出</p>
+            </div>
+            <button onclick="exportMarkdown()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all shadow-md active:scale-95 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                导出 .md 文件
+            </button>
+        </header>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">文章标题 (Title)</label>
+                    <input type="text" id="fm-title" placeholder="Hello Astro..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                </div>
+                
+                <div class="space-y-1.5 md:col-span-2 lg:col-span-1">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">封面图片 (Hero Image URL)</label>
+                    <input type="text" id="fm-image" placeholder="/blog-placeholder.jpg" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                </div>
+
+                <div class="space-y-1.5 md:col-span-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">摘要描述 (Description)</label>
+                    <input type="text" id="fm-desc" placeholder="关于这篇文章的简短介绍..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">发布日期 (Pub Date)</label>
+                    <input type="date" id="fm-date" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">标签 (Tags)</label>
+                    <input type="text" id="fm-tags" placeholder="tech, tutorial" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                </div>
+            </div>
+        </section>
+
+        <div id="vditor" class="shadow-sm"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
+    <script>
+        let vditor;
+
+        window.onload = () => {
+            document.getElementById('fm-date').valueAsDate = new Date();
+
+            vditor = new Vditor('vditor', {
+                height: 550,
+                placeholder: '使用 Markdown 开始创作...',
+                theme: 'classic',
+                icon: 'ant-design',
+                mode: 'ir',
+                cache: { enable: true },
+                toolbarConfig: { pin: true },
+                toolbar: [
+                    'emoji', 'headings', 'bold', 'italic', 'strike', 'link', '|',
+                    'list', 'ordered-list', 'check', '|',
+                    'quote', 'line', 'code', 'inline-code', 'table', '|',
+                    'upload', 'undo', 'redo', '|',
+                    'outline', 'preview', 'fullscreen'
+                ]
+            });
+        };
+
+        function exportMarkdown() {
+            const title = document.getElementById('fm-title').value || 'Untitled';
+            const desc = document.getElementById('fm-desc').value || '';
+            const image = document.getElementById('fm-image').value || '';
+            const date = document.getElementById('fm-date').value || new Date().toISOString().split('T')[0];
+            const tagsRaw = document.getElementById('fm-tags').value;
+            
+            // 标签处理
+            const tags = tagsRaw ? tagsRaw.split(',').map(tag => `  - ${tag.trim()}`).join('\n') : '';
+            const tagsSection = tags ? `tags:\n${tags}` : 'tags: []';
+
+            // 构建带有封面图的 Frontmatter (适配 Astro 默认模板)
+            const frontmatter = `---
+title: "${title}"
+description: "${desc}"
+pubDate: ${date}
+heroImage: "${image}"
+${tagsSection}
+---`;
+
+            const content = vditor.getValue();
+            const fullContent = `${frontmatter}\n\n${content}`;
+
+            const blob = new Blob([fullContent], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            // 简单处理文件名：移除特殊字符并用连字符连接
+            const fileName = title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-');
+            a.download = `${fileName}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
