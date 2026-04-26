@@ -3,137 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Astro Markdown Editor</title>
+    <title>🚀 Astro Editor (Pro Mode)</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --vditor-color: #3b82f6; }
-        .vditor { border-radius: 8px; border: 1px solid #e5e7eb !important; }
-        .vditor-toolbar { border-bottom: 1px solid #e5e7eb !important; background-color: #f9fafb !important; border-radius: 8px 8px 0 0; }
-        input:focus { border-color: #3b82f6 !important; }
+        .vditor { border-radius: 12px; border: 1px solid #e5e7eb !important; overflow: hidden; }
+        .vditor-toolbar { border-bottom: 1px solid #e5e7eb !important; background-color: #f9fafb !important; }
+        
+        #lock-screen {
+            position: fixed; inset: 0; z-index: 100;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(20px); transition: all 0.5s ease;
+        }
+        .hidden-content { display: none; }
+        .emoji-btn { cursor: pointer; transition: transform 0.2s; font-size: 1.4rem; filter: grayscale(0.3); }
+        .emoji-btn:hover { transform: scale(1.3); filter: grayscale(0); }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen p-4 md:p-8 font-sans text-slate-900">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
-    <div class="max-w-5xl mx-auto space-y-6">
-        <header class="flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight text-slate-800">Astro Editor</h1>
-                <p class="text-sm text-slate-500">集成封面管理与 Frontmatter 导出</p>
+    <div id="lock-screen">
+        <div class="bg-white/10 p-8 rounded-3xl border border-white/20 shadow-2xl text-center space-y-6 w-80 backdrop-blur-md">
+            <div class="text-6xl animate-bounce">🔒</div>
+            <div class="space-y-2">
+                <h2 class="text-white text-xl font-bold tracking-wide">私有编辑器</h2>
+                <p class="text-slate-400 text-xs">Environment variable secured</p>
             </div>
-            <button onclick="exportMarkdown()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all shadow-md active:scale-95 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                导出 .md 文件
+            <input type="password" id="access-password" placeholder="输入访问密钥..." 
+                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-center transition-all">
+            <button onclick="verifyPassword()" 
+                class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20">
+                解除锁定
             </button>
-        </header>
+            <p id="error-msg" class="text-rose-400 text-xs font-medium hidden">🚫 密钥无效，拒绝访问</p>
+        </div>
+    </div>
 
-        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">文章标题 (Title)</label>
-                    <input type="text" id="fm-title" placeholder="Hello Astro..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+    <div id="main-content" class="hidden-content p-4 md:p-8">
+        <div class="max-w-5xl mx-auto space-y-6">
+            <header class="flex justify-between items-end border-b border-slate-200 pb-6">
+                <div>
+                    <h1 class="text-3xl font-black text-slate-800 flex items-center gap-2">Astro Editor ✍️</h1>
+                    <p class="text-slate-500 text-sm font-medium">配置已通过 Cloudflare Secrets 注入</p>
                 </div>
-                
-                <div class="space-y-1.5 md:col-span-2 lg:col-span-1">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">封面图片 (Hero Image URL)</label>
-                    <input type="text" id="fm-image" placeholder="/blog-placeholder.jpg" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                <div class="flex gap-3">
+                    <button onclick="logout()" class="text-slate-400 hover:text-slate-600 px-3 py-2 text-sm font-bold">登出 🚪</button>
+                    <button onclick="exportMarkdown()" class="bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-xl flex items-center gap-2">
+                        💾 导出文章
+                    </button>
                 </div>
+            </header>
 
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">文章分类 (Category)</label>
-                    <input type="text" id="fm-category" placeholder="技术笔记" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+            <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Title</label>
+                    <input type="text" id="fm-title" placeholder="文章标题" class="w-full bg-slate-50 p-2 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
                 </div>
-
-                <div class="space-y-1.5 md:col-span-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">摘要描述 (Description)</label>
-                    <input type="text" id="fm-desc" placeholder="关于这篇文章的简短介绍..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Category</label>
+                    <input type="text" id="fm-category" placeholder="分类" class="w-full bg-slate-50 p-2 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
                 </div>
-
-                <div class="space-y-1.5">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">发布日期 (Pub Date)</label>
-                    <input type="date" id="fm-date" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Date</label>
+                    <input type="date" id="fm-date" class="w-full bg-slate-50 p-2 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
                 </div>
+            </section>
 
-                <div class="space-y-1.5 md:col-span-1">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">标签 (Tags)</label>
-                    <input type="text" id="fm-tags" placeholder="tech, tutorial" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition">
+            <div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 w-fit">
+                <span class="text-[10px] font-bold text-slate-400 border-r pr-3">QUICK EMOJI</span>
+                <div class="flex gap-4">
+                    <span class="emoji-btn" onclick="insertEmoji('🚀')">🚀</span>
+                    <span class="emoji-btn" onclick="insertEmoji('💡')">💡</span>
+                    <span class="emoji-btn" onclick="insertEmoji('🔥')">🔥</span>
+                    <span class="emoji-btn" onclick="insertEmoji('✅')">✅</span>
+                    <span class="emoji-btn" onclick="insertEmoji('🛠️')">🛠️</span>
+                    <span class="emoji-btn" onclick="insertEmoji('📝')">📝</span>
                 </div>
             </div>
-        </section>
 
-        <div id="vditor" class="shadow-sm"></div>
+            <div id="vditor"></div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
     <script>
-        let vditor;
-
-        window.onload = () => {
-            // 初始化日期为今天
-            document.getElementById('fm-date').valueAsDate = new Date();
-
-            vditor = new Vditor('vditor', {
-                height: 550,
-                placeholder: '使用 Markdown 开始创作...',
-                theme: 'classic',
-                icon: 'ant-design',
-                mode: 'ir', // 即时渲染模式
-                cache: { enable: true },
-                toolbarConfig: { pin: true },
-                toolbar: [
-                    'emoji', 'headings', 'bold', 'italic', 'strike', 'link', '|',
-                    'list', 'ordered-list', 'check', '|',
-                    'quote', 'line', 'code', 'inline-code', 'table', '|',
-                    'upload', 'undo', 'redo', '|',
-                    'outline', 'preview', 'fullscreen'
-                ]
-            });
+        // 🛠️ 配置变量
+        const CONFIG = {
+            // 这个值在本地运行时是占位符，部署到 Cloudflare 时会被构建命令替换
+            PASSWORD: "__CF_PAGES_PASSWORD__", 
+            VDITOR_HEIGHT: 600
         };
 
-        function exportMarkdown() {
-            // 获取输入值
-            const title = document.getElementById('fm-title').value || 'Untitled';
-            const desc = document.getElementById('fm-desc').value || '';
-            const image = document.getElementById('fm-image').value || '';
-            const date = document.getElementById('fm-date').value || new Date().toISOString().split('T')[0];
-            const category = document.getElementById('fm-category').value || 'Uncategorized';
-            const tagsRaw = document.getElementById('fm-tags').value;
+        let vditor;
+
+        // 验证逻辑
+        function verifyPassword() {
+            const input = document.getElementById('access-password').value;
+            // 如果是本地开发环境且没被替换，赋予一个默认调试密码 1234
+            const secret = CONFIG.PASSWORD.includes("__CF_PAGES") ? "1234" : CONFIG.PASSWORD;
             
-            // 标签处理：转为 YAML 列表格式
-            const tags = tagsRaw ? tagsRaw.split(',').map(tag => `  - ${tag.trim()}`).join('\n') : '';
-            const tagsSection = tags ? `tags:\n${tags}` : 'tags: []';
+            if (input === secret) {
+                localStorage.setItem('auth_token', btoa(secret));
+                unlock();
+            } else {
+                const err = document.getElementById('error-msg');
+                err.classList.remove('hidden');
+                setTimeout(() => err.classList.add('hidden'), 2000);
+            }
+        }
 
-            // 构建带有 Category 的 Frontmatter
-            const frontmatter = `---
-title: "${title}"
-description: "${desc}"
-published: ${date}
-category: "${category}"
-image: "${image}"
-${tagsSection}
----`;
+        function checkAuth() {
+            const saved = localStorage.getItem('auth_token');
+            const secret = CONFIG.PASSWORD.includes("__CF_PAGES") ? "1234" : CONFIG.PASSWORD;
+            if (saved === btoa(secret)) unlock();
+        }
 
+        function unlock() {
+            document.getElementById('lock-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('lock-screen').style.display = 'none';
+                document.getElementById('main-content').classList.remove('hidden-content');
+                initVditor();
+            }, 500);
+        }
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            location.reload();
+        }
+
+        function initVditor() {
+            vditor = new Vditor('vditor', {
+                height: CONFIG.VDITOR_HEIGHT,
+                mode: 'ir',
+                theme: 'classic',
+                cache: { enable: true },
+                toolbar: ['headings', 'bold', 'italic', 'link', 'list', 'check', 'quote', 'code', 'table', 'undo', 'redo', 'fullscreen']
+            });
+            document.getElementById('fm-date').valueAsDate = new Date();
+        }
+
+        function insertEmoji(emoji) { vditor.insertValue(emoji); }
+
+        function exportMarkdown() {
+            const title = document.getElementById('fm-title').value || 'post';
+            const category = document.getElementById('fm-category').value || 'General';
+            const date = document.getElementById('fm-date').value;
             const content = vditor.getValue();
-            const fullContent = `${frontmatter}\n\n${content}`;
 
-            // 导出文件逻辑
-            const blob = new Blob([fullContent], { type: 'text/markdown' });
+            const output = `---\ntitle: "${title}"\ncategory: "${category}"\ndate: ${date}\n---\n\n${content}`;
+            const blob = new Blob([output], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            
-            // 处理文件名
-            const fileName = title.toLowerCase()
-                .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '');
-            
-            a.download = `${fileName || 'post'}.md`;
-            document.body.appendChild(a);
+            a.download = `${title.replace(/\s+/g, '-')}.md`;
             a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
         }
+
+        document.getElementById('access-password').addEventListener('keypress', e => e.key === 'Enter' && verifyPassword());
+        window.onload = checkAuth;
     </script>
 </body>
 </html>
+
