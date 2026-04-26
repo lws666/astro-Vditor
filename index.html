@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 Astro Editor (Pro Mode)</title>
+    <title>🚀 Astro Editor Pro + GitHub Upload</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --vditor-color: #3b82f6; }
         .vditor { border-radius: 12px; border: 1px solid #e5e7eb !important; overflow: hidden; }
-        .vditor-toolbar { border-bottom: 1px solid #e5e7eb !important; background-color: #f9fafb !important; }
-        
         #lock-screen {
             position: fixed; inset: 0; z-index: 100;
             background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -18,142 +16,197 @@
             backdrop-filter: blur(20px); transition: all 0.5s ease;
         }
         .hidden-content { display: none; }
-        .emoji-btn { cursor: pointer; transition: transform 0.2s; font-size: 1.4rem; filter: grayscale(0.3); }
-        .emoji-btn:hover { transform: scale(1.3); filter: grayscale(0); }
+        .input-group label { text-[10px] font-black text-slate-400 uppercase mb-1 block; }
+        .gh-config-input { width: 100%; bg-slate-50 p-2 rounded-lg outline-none border border-slate-200 text-sm focus:ring-1 focus:ring-blue-500; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
     <div id="lock-screen">
         <div class="bg-white/10 p-8 rounded-3xl border border-white/20 shadow-2xl text-center space-y-6 w-80 backdrop-blur-md">
-            <div class="text-6xl animate-bounce">🔒</div>
-            <div class="space-y-2">
-                <h2 class="text-white text-xl font-bold tracking-wide">私有编辑器</h2>
-                <p class="text-slate-400 text-xs">Environment variable secured</p>
-            </div>
+            <div class="text-6xl">🔒</div>
+            <h2 class="text-white text-xl font-bold">私有编辑器</h2>
             <input type="password" id="access-password" placeholder="输入访问密钥..." 
-                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-center transition-all">
-            <button onclick="verifyPassword()" 
-                class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20">
-                解除锁定
-            </button>
-            <p id="error-msg" class="text-rose-400 text-xs font-medium hidden">🚫 密钥无效，拒绝访问</p>
+                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-white text-center">
+            <button onclick="verifyPassword()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold">解除锁定</button>
+            <p id="error-msg" class="text-rose-400 text-xs hidden">🚫 密钥无效</p>
         </div>
     </div>
 
     <div id="main-content" class="hidden-content p-4 md:p-8">
-        <div class="max-w-5xl mx-auto space-y-6">
-            <header class="flex justify-between items-end border-b border-slate-200 pb-6">
-                <div>
-                    <h1 class="text-3xl font-black text-slate-800 flex items-center gap-2">Astro Editor ✍️</h1>
-                    <p class="text-slate-500 text-sm font-medium">配置已通过 Cloudflare Secrets 注入</p>
-                </div>
+        <div class="max-w-6xl mx-auto space-y-6">
+            <header class="flex justify-between items-center">
+                <h1 class="text-2xl font-black text-slate-800">Astro Editor ✍️</h1>
                 <div class="flex gap-3">
-                    <button onclick="logout()" class="text-slate-400 hover:text-slate-600 px-3 py-2 text-sm font-bold">登出 🚪</button>
-                    <button onclick="exportMarkdown()" class="bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-xl flex items-center gap-2">
-                        💾 导出文章
-                    </button>
+                    <button onclick="logout()" class="text-slate-400 hover:text-slate-600 text-sm font-bold">登出</button>
+                    <button onclick="exportMarkdown()" class="bg-slate-900 text-white px-5 py-2 rounded-xl font-bold shadow-lg">💾 导出文章</button>
                 </div>
             </header>
 
-            <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Title</label>
-                    <input type="text" id="fm-title" placeholder="文章标题" class="w-full bg-slate-50 p-2 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Category</label>
-                    <input type="text" id="fm-category" placeholder="分类" class="w-full bg-slate-50 p-2 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Date</label>
-                    <input type="date" id="fm-date" class="w-full bg-slate-50 p-2 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-            </section>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <h3 class="font-bold text-slate-700 flex items-center gap-2">📦 GitHub 图床配置</h3>
+                        <div class="input-group">
+                            <label>Username</label>
+                            <input type="text" id="gh-user" placeholder="GitHub 用户名" class="gh-config-input">
+                        </div>
+                        <div class="input-group">
+                            <label>Repo</label>
+                            <input type="text" id="gh-repo" placeholder="仓库名 (如: blog-images)" class="gh-config-input">
+                        </div>
+                        <div class="input-group">
+                            <label>Path</label>
+                            <input type="text" id="gh-path" placeholder="路径 (如: posts/)" class="gh-config-input">
+                        </div>
+                        <div class="input-group">
+                            <label>Token</label>
+                            <input type="password" id="gh-token" placeholder="GitHub Classic Token" class="gh-config-input">
+                        </div>
+                        <p class="text-[10px] text-slate-400 italic">配置仅保存在本地浏览器中</p>
+                    </section>
 
-            <div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 w-fit">
-                <span class="text-[10px] font-bold text-slate-400 border-r pr-3">QUICK EMOJI</span>
-                <div class="flex gap-4">
-                    <span class="emoji-btn" onclick="insertEmoji('🚀')">🚀</span>
-                    <span class="emoji-btn" onclick="insertEmoji('💡')">💡</span>
-                    <span class="emoji-btn" onclick="insertEmoji('🔥')">🔥</span>
-                    <span class="emoji-btn" onclick="insertEmoji('✅')">✅</span>
-                    <span class="emoji-btn" onclick="insertEmoji('🛠️')">🛠️</span>
-                    <span class="emoji-btn" onclick="insertEmoji('📝')">📝</span>
+                    <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <h3 class="font-bold text-slate-700">📝 文章信息</h3>
+                        <div class="input-group"><label>Title</label><input type="text" id="fm-title" class="gh-config-input"></div>
+                        <div class="input-group"><label>Category</label><input type="text" id="fm-category" class="gh-config-input"></div>
+                        <div class="input-group"><label>Hero Image URL</label><input type="text" id="fm-image" class="gh-config-input"></div>
+                    </section>
+                </div>
+
+                <div class="lg:col-span-3 space-y-4">
+                    <div id="vditor"></div>
                 </div>
             </div>
-
-            <div id="vditor"></div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
     <script>
-        // 🛠️ 配置变量
+        // 配置变量
         const CONFIG = {
-            // 这个值在本地运行时是占位符，部署到 Cloudflare 时会被构建命令替换
-            PASSWORD: "__CF_PAGES_PASSWORD__", 
-            VDITOR_HEIGHT: 600
+            PASSWORD: "__CF_PAGES_PASSWORD__", // 由 Cloudflare 替换
         };
 
         let vditor;
 
-        // 验证逻辑
+        // --- 核心功能：上传至 GitHub ---
+        async function uploadToGithub(file) {
+            const user = document.getElementById('gh-user').value;
+            const repo = document.getElementById('gh-repo').value;
+            const path = document.getElementById('gh-path').value.replace(/\/$/, "");
+            const token = document.getElementById('gh-token').value;
+
+            if (!user || !repo || !token) {
+                alert("请先完善 GitHub 配置！");
+                return null;
+            }
+
+            // 文件名处理：时间戳 + 原文件名
+            const fileName = `${Date.now()}-${file.name}`;
+            const fullPath = path ? `${path}/${fileName}` : fileName;
+            
+            // 将文件转为 Base64
+            const reader = new FileReader();
+            const contentBase64 = await new Promise((resolve) => {
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+
+            const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/${fullPath}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: `Upload image via Astro Editor: ${fileName}`,
+                        content: contentBase64
+                    })
+                });
+
+                if (response.ok) {
+                    // 使用 jsDelivr CDN 加速返回地址
+                    return `https://cdn.jsdelivr.net/gh/${user}/${repo}@main/${fullPath}`;
+                } else {
+                    const err = await response.json();
+                    alert("上传失败: " + err.message);
+                    return null;
+                }
+            } catch (e) {
+                alert("网络错误，请检查 Token 有效性");
+                return null;
+            }
+        }
+
+        // --- 初始化编辑器 ---
+        function initVditor() {
+            vditor = new Vditor('vditor', {
+                height: 700,
+                mode: 'ir',
+                cache: { enable: true },
+                upload: {
+                    accept: 'image/*',
+                    handler: async (files) => {
+                        for (let file of files) {
+                            const url = await uploadToGithub(file);
+                            if (url) {
+                                // 自动插入到编辑器
+                                vditor.insertValue(`![${file.name}](${url})`);
+                                // 同时更新 Hero Image URL (如果是第一张)
+                                if (!document.getElementById('fm-image').value) {
+                                    document.getElementById('fm-image').value = url;
+                                }
+                            }
+                        }
+                    }
+                },
+                toolbar: ['headings', 'bold', 'italic', 'link', '|', 'list', 'ordered-list', 'check', '|', 'quote', 'line', 'code', 'table', '|', 'upload', 'undo', 'redo', 'fullscreen']
+            });
+        }
+
+        // --- 基础逻辑 ---
         function verifyPassword() {
             const input = document.getElementById('access-password').value;
-            // 如果是本地开发环境且没被替换，赋予一个默认调试密码 1234
             const secret = CONFIG.PASSWORD.includes("__CF_PAGES") ? "1234" : CONFIG.PASSWORD;
-            
             if (input === secret) {
                 localStorage.setItem('auth_token', btoa(secret));
                 unlock();
             } else {
-                const err = document.getElementById('error-msg');
-                err.classList.remove('hidden');
-                setTimeout(() => err.classList.add('hidden'), 2000);
+                document.getElementById('error-msg').classList.remove('hidden');
             }
         }
 
-        function checkAuth() {
-            const saved = localStorage.getItem('auth_token');
-            const secret = CONFIG.PASSWORD.includes("__CF_PAGES") ? "1234" : CONFIG.PASSWORD;
-            if (saved === btoa(secret)) unlock();
-        }
-
         function unlock() {
-            document.getElementById('lock-screen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('lock-screen').style.display = 'none';
-                document.getElementById('main-content').classList.remove('hidden-content');
-                initVditor();
-            }, 500);
-        }
-
-        function logout() {
-            localStorage.removeItem('auth_token');
-            location.reload();
-        }
-
-        function initVditor() {
-            vditor = new Vditor('vditor', {
-                height: CONFIG.VDITOR_HEIGHT,
-                mode: 'ir',
-                theme: 'classic',
-                cache: { enable: true },
-                toolbar: ['headings', 'bold', 'italic', 'link', 'list', 'check', 'quote', 'code', 'table', 'undo', 'redo', 'fullscreen']
+            document.getElementById('lock-screen').style.display = 'none';
+            document.getElementById('main-content').classList.remove('hidden-content');
+            initVditor();
+            // 自动加载本地缓存的 GitHub 配置
+            ['gh-user', 'gh-repo', 'gh-path'].forEach(id => {
+                const saved = localStorage.getItem(id);
+                if (saved) document.getElementById(id).value = saved;
             });
-            document.getElementById('fm-date').valueAsDate = new Date();
         }
 
-        function insertEmoji(emoji) { vditor.insertValue(emoji); }
+        // 离开时保存非敏感配置
+        window.onbeforeunload = () => {
+            ['gh-user', 'gh-repo', 'gh-path'].forEach(id => {
+                localStorage.setItem(id, document.getElementById(id).value);
+            });
+        };
+
+        function logout() { localStorage.removeItem('auth_token'); location.reload(); }
 
         function exportMarkdown() {
             const title = document.getElementById('fm-title').value || 'post';
             const category = document.getElementById('fm-category').value || 'General';
-            const date = document.getElementById('fm-date').value;
+            const image = document.getElementById('fm-image').value || '';
             const content = vditor.getValue();
 
-            const output = `---\ntitle: "${title}"\ncategory: "${category}"\ndate: ${date}\n---\n\n${content}`;
+            const output = `---\ntitle: "${title}"\ncategory: "${category}"\nimage: "${image}"\npublished: ${new Date().toISOString().split('T')[0]}\n---\n\n${content}`;
             const blob = new Blob([output], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -163,7 +216,7 @@
         }
 
         document.getElementById('access-password').addEventListener('keypress', e => e.key === 'Enter' && verifyPassword());
-        window.onload = checkAuth;
+        window.onload = () => { if(localStorage.getItem('auth_token')) unlock(); };
     </script>
 </body>
 </html>
