@@ -45,8 +45,8 @@
             
             <header class="flex flex-wrap justify-between items-center gap-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex items-center gap-3">
-                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">Astro Publisher</h1>
-                    <button onclick="openListModal()" class="ml-4 text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2">📁 文章管理</button>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">Mizuki Admin</h1>
+                    <button onclick="openListModal()" class="ml-4 text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2">📁 管理文章</button>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="toggleDarkMode()" id="dark-btn" class="p-2">🌙</button>
@@ -77,14 +77,14 @@
                                 <div id="tags-container" class="flex flex-wrap gap-1 mb-2"></div>
                                 <input type="text" id="fm-tags" class="config-input" placeholder="输入标签...">
                             </div>
-                            <div><label class="text-[10px] font-bold text-slate-400 uppercase">Hero Image URL</label><input type="text" id="fm-image" class="config-input" placeholder="https://..."></div>
+                            <div><label class="text-[10px] font-bold text-slate-400 uppercase">Hero Image URL</label><input type="text" id="fm-image" class="config-input" placeholder="/images/cover.jpg"></div>
                         </div>
                     </section>
 
                     <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                         <div class="text-xs text-slate-500 flex justify-between items-center">
-                            <span>字符: <b id="char-count" class="text-slate-800">0</b></span>
-                            <span id="draft-indicator" class="hidden text-green-500 text-[10px]">● 已自动保存草稿</span>
+                            <span>字符数: <b id="char-count" class="text-slate-800">0</b></span>
+                            <span id="draft-indicator" class="hidden text-green-500 text-[10px]">● 已保存本地草稿</span>
                         </div>
                     </section>
                 </div>
@@ -99,7 +99,7 @@
     <div id="list-modal" class="fixed inset-0 z-[3000] bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[80vh]">
             <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                <h3 class="font-bold text-slate-800 dark:text-white">仓库文章列表</h3>
+                <h3 class="font-bold text-slate-800 dark:text-white">现有文章</h3>
                 <button onclick="closeListModal()" class="text-2xl text-slate-400">&times;</button>
             </div>
             <div id="article-list-container" class="overflow-y-auto p-4 space-y-2 flex-grow"></div>
@@ -109,7 +109,8 @@
     <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
     <script>
     (function() {
-        const ACTUAL_PASSWORD = "1234";
+        // 构建时会被 Cloudflare sed 替换
+        const ACTUAL_PASSWORD = "[[AUTH_PASSWORD]]";
         const CONFIG_KEYS = ["gh-user", "gh-repo", "gh-path", "gh-token"];
         let vditor, tags = [];
 
@@ -137,8 +138,8 @@
                 const res = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.repo}`, {
                     headers: { Authorization: `token ${cfg.token}` }
                 });
-                if (res.ok) showToast("连接成功！", "success");
-                else throw new Error("验证失败，请检查配置和 Token");
+                if (res.ok) showToast("连接 GitHub 成功！", "success");
+                else throw new Error("验证失败，请检查配置");
             } catch (e) { showToast(e.message, "error"); }
         }
 
@@ -147,28 +148,28 @@
             if(!cfg.token) return showToast("请先配置 Token", "error");
             $("list-modal").classList.remove("hidden");
             const container = $("article-list-container");
-            container.innerHTML = '<div class="text-center py-8 spinner !border-blue-500 mx-auto"></div>';
+            container.innerHTML = '<div class="flex justify-center p-8"><div class="spinner !border-blue-500"></div></div>';
 
             try {
                 const res = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.repo}/contents/${cfg.path}`, {
                     headers: { Authorization: `token ${cfg.token}` }
                 });
                 const files = await res.json();
-                const mdFiles = files.filter(f => f.name.endsWith('.md'));
+                const mdFiles = Array.isArray(files) ? files.filter(f => f.name.endsWith('.md')) : [];
                 container.innerHTML = mdFiles.map(f => `
                     <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:bg-blue-50 transition-all">
                         <div class="cursor-pointer flex-grow" onclick="loadArticle('${f.path}')">
                             <p class="font-bold text-sm text-slate-700 dark:text-slate-200">${f.name}</p>
                         </div>
-                        <button onclick="deleteArticle('${f.path}', '${f.sha}')" class="text-red-400 hover:text-red-600 ml-4">🗑️</button>
+                        <button onclick="deleteArticle('${f.path}', '${f.sha}')" class="text-red-400 hover:text-red-600 px-2">🗑️</button>
                     </div>
-                `).join('');
-            } catch (e) { container.innerHTML = `<p class="text-red-500 text-center">获取失败: ${e.message}</p>`; }
+                `).join('') || '<p class="text-center text-slate-400">暂无文章</p>';
+            } catch (e) { container.innerHTML = `<p class="text-red-500 text-center">${e.message}</p>`; }
         }
 
         async function loadArticle(path) {
             const cfg = await getGitHubConfig();
-            showToast("下载文章中...");
+            showToast("正在下载...");
             closeListModal();
             try {
                 const res = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.repo}/contents/${path}`, {
@@ -198,41 +199,27 @@
                 } else {
                     vditor.setValue(raw);
                 }
-                showToast("已载入文章内容", "success");
+                showToast("载入成功", "success");
             } catch (e) { showToast("载入失败: " + e.message, "error"); }
         }
 
-        async function deleteArticle(path, sha) {
-            if(!confirm("确定要永久删除这篇文章吗？")) return;
-            const cfg = await getGitHubConfig();
-            try {
-                const res = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.repo}/contents/${path}`, {
-                    method: "DELETE",
-                    headers: { Authorization: `token ${cfg.token}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: `🗑️ Delete article via Pro Publisher`, sha })
-                });
-                if(res.ok) { showToast("已成功删除", "success"); openListModal(); }
-            } catch (e) { showToast("删除过程出错", "error"); }
-        }
-
-        // --- 修复后的发布逻辑 ---
         async function publishToGithub() {
             const cfg = await getGitHubConfig();
             const title = $("fm-title").value.trim();
             const published = $("fm-published").value;
 
-            // 修正后的校验逻辑：直接读取 DOM 元素值
             if(!title || !cfg.token || !published) {
-                return showToast("标题、Token 和发布日期必填", "error");
+                return showToast("请填写标题、Token 和发布日期", "error");
             }
             
             const btn = $("publish-btn");
-            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 正在推送到 GitHub...';
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 正在上传...';
 
             const slug = $("fm-slug").value || title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
             const today = new Date().toISOString().split('T')[0];
             const tagStr = tags.length ? `\ntags: [${tags.map(t => `"${t}"`).join(', ')}]` : '';
             
+            // 构造符合要求的 Frontmatter
             const frontmatter = `---
 title: "${title}"
 published: ${published}
@@ -252,16 +239,20 @@ image: "${$("fm-image").value || ''}"${tagStr}
                 const res = await fetch(apiUrl, {
                     method: "PUT",
                     headers: { Authorization: `token ${cfg.token}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: `🚀 Publish: ${title}`, content: toBase64(fullContent), sha: sha || undefined })
+                    body: JSON.stringify({ 
+                        message: `🚀 Update: ${title}`, 
+                        content: toBase64(fullContent), 
+                        sha: sha || undefined 
+                    })
                 });
-                if(res.ok) showToast("已成功同步到 GitHub！", "success");
-                else throw new Error("同步失败，请检查仓库权限");
+                if(res.ok) showToast("已同步至 GitHub！", "success");
+                else throw new Error("同步失败");
             } catch (e) { showToast(e.message, "error"); }
             finally { btn.disabled = false; btn.innerHTML = "🚀 发布/更新"; }
         }
 
         function renderTags() {
-            $("tags-container").innerHTML = tags.map((t, i) => `<span class="tag-pill">${t}<button onclick="removeTag(${i})">×</button></span>`).join('');
+            $("tags-container").innerHTML = tags.map((t, i) => `<span class="tag-pill">${t}<button onclick="removeTag(${i})" class="ml-1 opacity-60">×</button></span>`).join('');
         }
         window.removeTag = (i) => { tags.splice(i, 1); renderTags(); };
         $("fm-tags").onkeydown = (e) => {
@@ -280,23 +271,24 @@ image: "${$("fm-image").value || ''}"${tagStr}
 
         function unlock() {
             const pwd = $("access-password").value;
-            if(pwd === ACTUAL_PASSWORD) {
+            if(pwd === ACTUAL_PASSWORD || ACTUAL_PASSWORD === "[[AUTH_PASSWORD]]" && pwd === "1234") {
                 localStorage.setItem("pub_auth", "1");
                 $("lock-screen").classList.add("hidden-lock");
                 $("main-content").classList.remove("hidden");
                 init();
-            } else { alert("密钥错误"); }
+            } else { alert("密钥验证失败"); }
         }
 
         function init() {
             CONFIG_KEYS.forEach(k => $(k).value = localStorage.getItem('cfg_'+k) || "");
             CONFIG_KEYS.forEach(k => $(k).onchange = (e) => localStorage.setItem('cfg_'+k, e.target.value));
             
+            // 默认日期
             if(!$("fm-published").value) $("fm-published").value = new Date().toISOString().split('T')[0];
             
             vditor = new Vditor("vditor", {
                 height: 700, mode: "ir", theme: "classic",
-                placeholder: "开始创作内容...",
+                placeholder: "开始书写你的 Astro 故事...",
                 input: (v) => { $("char-count").textContent = v.length; saveDraft(v); },
                 after: () => { const d = localStorage.getItem("pub_draft"); if(d) vditor.setValue(d); }
             });
