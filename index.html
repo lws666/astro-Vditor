@@ -18,6 +18,7 @@
         .glass-card { background: rgba(255, 255, 255, var(--glass-opacity)); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; }
         .vditor { border: none !important; background: rgba(0, 0, 0, 0.2) !important; border-radius: 12px !important; }
         .config-input { width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 12px; border-radius: 10px; color: white; outline: none; font-size: 13px; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
         #lock-screen { position: fixed; inset: 0; z-index: 9999; background: #0f172a; display: flex; align-items: center; justify-content: center; }
         #lock-screen.hidden-lock { opacity: 0; visibility: hidden; pointer-events: none; transition: 0.6s; }
         @media (min-width: 1025px) { .pc-layout { display: grid; grid-template-columns: 240px 1fr; height: 100vh; } }
@@ -27,9 +28,9 @@
 
     <div id="lock-screen">
         <div class="glass-card p-10 text-center space-y-6 w-[85%] max-w-sm">
-            <h2 class="text-2xl font-bold">Mizuki Admin</h2>
-            <input type="password" id="access-password" placeholder="请输入密钥" class="config-input text-center">
-            <button id="unlock-btn" class="w-full bg-blue-600 py-3 rounded-xl font-bold">解锁进入</button>
+            <h2 class="text-2xl font-bold text-blue-400">Mizuki Admin</h2>
+            <input type="password" id="access-password" placeholder="请输入管理密钥" class="config-input text-center">
+            <button id="unlock-btn" class="w-full bg-blue-600 py-3 rounded-xl font-bold hover:bg-blue-500 transition-all">解锁进入</button>
         </div>
     </div>
 
@@ -37,18 +38,18 @@
         <div class="pc-layout">
             <aside class="p-6 border-r border-white/10 bg-black/10 flex flex-col justify-between pc-only">
                 <div>
-                    <div class="font-bold text-lg mb-8">MIZUKI CMS</div>
+                    <div class="font-bold text-lg mb-8 text-blue-400">MIZUKI CMS</div>
                     <nav class="space-y-2 text-sm">
-                        <div onclick="openListModal()" class="cursor-pointer p-3 hover:bg-white/10 rounded-lg">📁 文章管理</div>
-                        <div onclick="toggleDarkMode()" class="cursor-pointer p-3 hover:bg-white/10 rounded-lg">🌓 切换模式</div>
-                        <div onclick="logout()" class="cursor-pointer p-3 hover:bg-white/10 rounded-lg text-red-400">🚪 退出登录</div>
+                        <div onclick="openListModal()" class="cursor-pointer p-3 hover:bg-white/10 rounded-lg transition-all">📁 文章管理</div>
+                        <div onclick="toggleDarkMode()" class="cursor-pointer p-3 hover:bg-white/10 rounded-lg transition-all">🌓 切换模式</div>
+                        <div onclick="logout()" class="cursor-pointer p-3 hover:bg-white/10 rounded-lg text-red-400 transition-all">🚪 退出登录</div>
                     </nav>
                 </div>
             </aside>
 
             <div class="overflow-y-auto p-4 lg:p-8">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1600px] mx-auto">
-                    <div class="lg:col-span-3 space-y-4">
+                    <div class="lg:col-span-3">
                         <section class="glass-card p-5 space-y-4">
                             <h3 class="text-xs font-bold text-blue-400 uppercase border-b border-white/10 pb-2">GitHub Sync</h3>
                             <div class="space-y-3 text-[10px]">
@@ -60,7 +61,7 @@
                         </section>
                     </div>
 
-                    <div class="lg:col-span-3 space-y-4">
+                    <div class="lg:col-span-3">
                         <section class="glass-card p-5 space-y-4">
                             <h3 class="text-xs font-bold text-blue-400 uppercase border-b border-white/10 pb-2">Frontmatter</h3>
                             <div class="space-y-3 text-[10px]">
@@ -77,12 +78,12 @@
                     <div class="lg:col-span-6 space-y-4">
                         <div class="glass-card p-2 min-h-[600px] flex flex-col">
                             <div class="flex gap-2 p-2 border-b border-white/5 mb-2">
-                                <button onclick="insertVideoTag()" class="bg-blue-600/30 hover:bg-blue-600 px-3 py-1 rounded text-[10px] font-bold">📺 插入视频</button>
+                                <button onclick="insertVideoTag()" class="bg-blue-600/30 hover:bg-blue-600 px-3 py-1 rounded text-[10px] font-bold transition-all">📺 插入视频</button>
                                 <span id="save-status" class="ml-auto text-[10px] opacity-30 self-center">草稿就绪</span>
                             </div>
                             <div id="vditor" class="flex-grow"></div>
                         </div>
-                        <button onclick="publishToGithub()" id="publish-btn" class="w-full bg-blue-600 py-3 rounded-xl font-bold shadow-lg">发布到 GITHUB</button>
+                        <button onclick="publishToGithub()" id="publish-btn" class="w-full bg-blue-600 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all">确认并上传到 GITHUB</button>
                     </div>
                 </div>
             </div>
@@ -99,10 +100,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
     <script>
     (function() {
-        // ==========================================
-        // 重要：这里的 [[ADMIN_PASSWORD]] 是占位符
-        // Cloudflare 会在部署时自动将其替换为环境变量
-        // ==========================================
+        // 构建时替换
         const ACTUAL_PASSWORD = "[[ADMIN_PASSWORD]]"; 
 
         let vditor, currentSha = null, currentFileName = null;
@@ -115,21 +113,30 @@
         if(localStorage.getItem('mizuki_dark') === 'true') document.body.classList.add('dark-mode');
 
         window.insertVideoTag = () => {
-            const url = prompt("视频链接:"); if(!url) return;
-            const poster = prompt("封面链接:", "https://img.lwsnb.dpdns.org/file/1770349301804_DefualtThumbnail.jpg.webp");
+            const url = prompt("视频 URL:"); if(!url) return;
+            const poster = prompt("封面 URL:", "https://img.lwsnb.dpdns.org/file/1770349301804_DefualtThumbnail.jpg.webp");
             vditor.insertValue(`\n<video width="640" height="360" controls="" poster="${poster}">\n  <source src="${url}" type="video/mp4"/>\n  你的浏览器不支持 HTML5 视频。\n</video>\n`);
         };
 
         window.publishToGithub = async () => {
             const user = $("gh-user").value, repo = $("gh-repo").value, path = $("gh-path").value, token = $("gh-token").value;
             const title = $("fm-title").value, published = $("fm-published").value;
-            if(!token || !title || !published) return alert("配置不全");
+            if(!token || !title || !published) return alert("配置信息不完整");
 
             const btn = $("publish-btn");
             btn.disabled = true; btn.textContent = "上传中...";
 
             const fileName = currentFileName || `${published}-${title.replace(/\s+/g, '-')}.md`;
-            const yaml = `---\ntitle: "${title}"\npublished: ${published}\ncategory: "${$("fm-category").value}"\nimage: "${$("fm-image").value}"\ntags: [${$("fm-tags").value}]\ndescription: "${$("fm-description").value}"\n---\n\n`;
+            const yaml = `---
+title: "${title}"
+published: ${published}
+category: "${$("fm-category").value}"
+image: "${$("fm-image").value}"
+tags: [${$("fm-tags").value}]
+description: "${$("fm-description").value}"
+---
+
+`;
             const content = yaml + vditor.getValue();
             const encoded = btoa(unescape(encodeURIComponent(content)));
 
@@ -137,16 +144,17 @@
                 const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}/${fileName}`, {
                     method: "PUT",
                     headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: `Update via CMS`, content: encoded, sha: currentSha || undefined })
+                    body: JSON.stringify({ message: "Update via Mizuki Admin", content: encoded, sha: currentSha || undefined })
                 });
                 if(res.ok) { alert("✅ 发布成功"); localStorage.removeItem("pub_draft"); location.reload(); }
+                else { alert("❌ 发布失败，请检查配置"); }
             } catch (e) { alert("❌ 网络错误"); }
-            btn.disabled = false; btn.textContent = "发布到 GITHUB";
+            btn.disabled = false; btn.textContent = "确认并上传到 GITHUB";
         };
 
         async function openListModal() {
             const user = $("gh-user").value, repo = $("gh-repo").value, path = $("gh-path").value, token = $("gh-token").value;
-            if(!token) return;
+            if(!token) return alert("请先填写 GitHub Token");
             $("list-modal").classList.remove("hidden");
             try {
                 const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, { headers: { Authorization: `token ${token}` } });
@@ -156,7 +164,7 @@
                         <span>${f.name}</span>
                     </div>
                 `).join('');
-            } catch (e) {}
+            } catch (e) { $("article-list-container").innerHTML = "获取列表失败"; }
         }
 
         async function loadArticle(name, path) {
@@ -168,8 +176,9 @@
             const fmMatch = content.match(/^---([\s\S]*?)---([\s\S]*)$/);
             if (fmMatch) {
                 const yaml = fmMatch[1], body = fmMatch[2].trim();
-                $("fm-title").value = (yaml.match(/title:\s*"(.*?)"/) || [])[1] || "";
+                $("fm-title").value = (yaml.match(/title:\s*"(.*?)"/) || yaml.match(/title:\s*(.*)/) || [])[1] || "";
                 $("fm-published").value = (yaml.match(/published:\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || "";
+                $("fm-category").value = (yaml.match(/category:\s*(.*)/) || [])[1] || "";
                 vditor.setValue(body);
             }
             $("list-modal").classList.add("hidden");
@@ -181,7 +190,7 @@
                 $(k).onchange = (e) => localStorage.setItem('cfg_'+k, e.target.value);
             });
             vditor = new Vditor("vditor", {
-                height: 600, theme: "dark",
+                height: 600, mode: "ir", theme: "dark",
                 after: () => { if(localStorage.getItem("pub_draft")) vditor.setValue(localStorage.getItem("pub_draft")); },
                 input: (v) => localStorage.setItem("pub_draft", v)
             });
@@ -189,12 +198,12 @@
 
         window.unlock = () => {
             const inputPwd = $("access-password").value;
-            // 容错逻辑：如果 sed 没生效，默认密码为 1234
-            if(inputPwd === ACTUAL_PASSWORD || (ACTUAL_PASSWORD === "[[ADMIN_PASSWORD]]" && inputPwd === "1234")) {
+            // 彻底禁用 1234，只匹配环境变量
+            if(inputPwd === ACTUAL_PASSWORD) {
                 localStorage.setItem("pub_auth", "1");
                 $("lock-screen").classList.add("hidden-lock"); $("main-content").classList.remove("hidden");
                 init();
-            } else { alert("密钥错误"); }
+            } else { alert("密钥验证失败"); }
         };
 
         window.logout = () => { localStorage.removeItem("pub_auth"); location.reload(); };
