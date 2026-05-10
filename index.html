@@ -69,7 +69,7 @@
                                 <div>PUBLISHED (DATE)<input type="date" id="fm-published" class="config-input mt-1"></div>
                                 <div>CATEGORY<input type="text" id="fm-category" class="config-input mt-1"></div>
                                 <div>IMAGE<input type="text" id="fm-image" class="config-input mt-1"></div>
-                                <div>TAGS<input type="text" id="fm-tags" class="config-input mt-1"></div>
+                                <div>TAGS<input type="text" id="fm-tags" class="config-input mt-1" placeholder="[tag1, tag2]"></div>
                                 <div>DESCRIPTION<textarea id="fm-description" class="config-input mt-1 h-16"></textarea></div>
                             </div>
                         </section>
@@ -79,7 +79,7 @@
                         <div class="glass-card p-2 min-h-[600px] flex flex-col">
                             <div class="flex gap-2 p-2 border-b border-white/5 mb-2">
                                 <button onclick="insertVideoTag()" class="bg-blue-600/30 hover:bg-blue-600 px-3 py-1 rounded text-[10px] font-bold transition-all">📺 插入视频</button>
-                                <span id="save-status" class="ml-auto text-[10px] opacity-30 self-center">草稿就绪</span>
+                                <span id="save-status" class="ml-auto text-[10px] opacity-30 self-center">就绪</span>
                             </div>
                             <div id="vditor" class="flex-grow"></div>
                         </div>
@@ -100,8 +100,8 @@
     <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
     <script>
     (function() {
-        // 构建时替换
-        const ACTUAL_PASSWORD = "[[ADMIN_PASSWORD]]"; 
+        // 构建时替换环境变量
+        const ADMIN_PASSWORD = "[[ADMIN_PASSWORD]]"; 
 
         let vditor, currentSha = null, currentFileName = null;
         const $ = (id) => document.getElementById(id);
@@ -147,42 +147,69 @@ description: "${$("fm-description").value}"
                     body: JSON.stringify({ message: "Update via Mizuki Admin", content: encoded, sha: currentSha || undefined })
                 });
                 if(res.ok) { alert("✅ 发布成功"); localStorage.removeItem("pub_draft"); location.reload(); }
-                else { alert("❌ 发布失败，请检查配置"); }
+                else { const err = await res.json(); alert("❌ 失败: " + err.message); }
             } catch (e) { alert("❌ 网络错误"); }
             btn.disabled = false; btn.textContent = "确认并上传到 GITHUB";
         };
 
-        async function openListModal() {
+        window.openListModal = async () => {
             const user = $("gh-user").value, repo = $("gh-repo").value, path = $("gh-path").value, token = $("gh-token").value;
             if(!token) return alert("请先填写 GitHub Token");
             $("list-modal").classList.remove("hidden");
+            $("article-list-container").innerHTML = "获取列表中...";
             try {
                 const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, { headers: { Authorization: `token ${token}` } });
                 const files = await res.json();
+                if(!Array.isArray(files)) throw new Error("无法读取路径内容");
                 $("article-list-container").innerHTML = files.filter(f => f.name.endsWith('.md')).map(f => `
-                    <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 group cursor-pointer" onclick="loadArticle('${f.name}', '${f.path}')">
-                        <span>${f.name}</span>
+                    <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 group transition-all">
+                        <span class="cursor-pointer flex-grow text-left" onclick="loadArticle('${f.name}', '${f.path}')">${f.name}</span>
+                        <button onclick="deleteArticle('${f.path}', '${f.sha}')" class="text-red-400 opacity-0 group-hover:opacity-100 px-2 transition-all">删除</button>
                     </div>
                 `).join('');
-            } catch (e) { $("article-list-container").innerHTML = "获取列表失败"; }
-        }
+            } catch (e) { $("article-list-container").innerHTML = "加载失败: " + e.message; }
+        };
 
-        async function loadArticle(name, path) {
+        window.loadArticle = async (name, path) => {
             const user = $("gh-user").value, repo = $("gh-repo").value, token = $("gh-token").value;
-            const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, { headers: { Authorization: `token ${token}` } });
-            const data = await res.json();
-            const content = decodeURIComponent(escape(atob(data.content)));
-            currentSha = data.sha; currentFileName = name;
-            const fmMatch = content.match(/^---([\s\S]*?)---([\s\S]*)$/);
-            if (fmMatch) {
-                const yaml = fmMatch[1], body = fmMatch[2].trim();
-                $("fm-title").value = (yaml.match(/title:\s*"(.*?)"/) || yaml.match(/title:\s*(.*)/) || [])[1] || "";
-                $("fm-published").value = (yaml.match(/published:\s*(\d{4}-\d{2}-\d{2})/) || [])[1] || "";
-                $("fm-category").value = (yaml.match(/category:\s*(.*)/) || [])[1] || "";
-                vditor.setValue(body);
-            }
-            $("list-modal").classList.add("hidden");
-        }
+            try {
+                const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, { headers: { Authorization: `token ${token}` } });
+                const data = await res.json();
+                const content = decodeURIComponent(escape(atob(data.content)));
+                currentSha = data.sha; currentFileName = name;
+
+                const fmMatch = content.match(/^---([\s\S]*?)---([\s\S]*)$/);
+                if (fmMatch) {
+                    const yaml = fmMatch[1], body = fmMatch[2].trim();
+                    const getVal = (regex) => (yaml.match(regex) || [])[1] || "";
+                    
+                    $("fm-title").value = getVal(/title:\s*"(.*?)"/) || getVal(/title:\s*(.*)/);
+                    $("fm-published").value = getVal(/published:\s*(\d{4}-\d{2}-\d{2})/);
+                    $("fm-category").value = getVal(/category:\s*"(.*?)"/) || getVal(/category:\s*(.*)/);
+                    $("fm-image").value = getVal(/image:\s*"(.*?)"/) || getVal(/image:\s*(.*)/);
+                    $("fm-tags").value = getVal(/tags:\s*\[(.*?)\]/);
+                    $("fm-description").value = getVal(/description:\s*"(.*?)"/) || getVal(/description:\s*(.*)/);
+                    vditor.setValue(body);
+                } else {
+                    vditor.setValue(content);
+                }
+                window.closeListModal();
+            } catch (e) { alert("加载文章失败"); }
+        };
+
+        window.deleteArticle = async (path, sha) => {
+            if(!confirm("确定要删除这篇文章吗？此操作不可撤销。")) return;
+            const user = $("gh-user").value, repo = $("gh-repo").value, token = $("gh-token").value;
+            try {
+                const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
+                    method: "DELETE",
+                    headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: "Delete via Mizuki Admin", sha: sha })
+                });
+                if(res.ok) { alert("已删除"); window.openListModal(); }
+                else { alert("删除失败"); }
+            } catch (e) { alert("网络错误"); }
+        };
 
         function init() {
             ["gh-user", "gh-repo", "gh-path", "gh-token"].forEach(k => {
@@ -192,14 +219,17 @@ description: "${$("fm-description").value}"
             vditor = new Vditor("vditor", {
                 height: 600, mode: "ir", theme: "dark",
                 after: () => { if(localStorage.getItem("pub_draft")) vditor.setValue(localStorage.getItem("pub_draft")); },
-                input: (v) => localStorage.setItem("pub_draft", v)
+                input: (v) => {
+                    localStorage.setItem("pub_draft", v);
+                    $("save-status").textContent = "草稿已存 " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
             });
         }
 
         window.unlock = () => {
             const inputPwd = $("access-password").value;
-            // 彻底禁用 1234，只匹配环境变量
-            if(inputPwd === ACTUAL_PASSWORD) {
+            // 唯一验证逻辑
+            if(inputPwd === ADMIN_PASSWORD) {
                 localStorage.setItem("pub_auth", "1");
                 $("lock-screen").classList.add("hidden-lock"); $("main-content").classList.remove("hidden");
                 init();
@@ -207,7 +237,7 @@ description: "${$("fm-description").value}"
         };
 
         window.logout = () => { localStorage.removeItem("pub_auth"); location.reload(); };
-        window.openListModal = openListModal; window.closeListModal = () => $("list-modal").classList.add("hidden");
+        window.closeListModal = () => $("list-modal").classList.add("hidden");
         $("unlock-btn").onclick = window.unlock;
         if(localStorage.getItem("pub_auth") === "1") {
             $("lock-screen").classList.add("hidden-lock"); $("main-content").classList.remove("hidden");
